@@ -441,8 +441,9 @@ static enum PHY_TYPE bdx_phy_init(struct bdx_priv *priv)
 
 	phy_id = bdx_mdio_scan_phy_id(priv);	/* set phy_mdio_port */
 
-	if (!priv->phy_mdio_port)
+	if (!phy_id) {
 		return PHY_TYPE_NA;	/* No PHY detected on MDIO bus. */
+	}
 
 	/* register the PHY-specific callbacks */
 	priv->phy_type = bdx_phy_register(priv, phy_id, &desc);
@@ -460,8 +461,9 @@ static enum PHY_TYPE bdx_phy_init(struct bdx_priv *priv)
 
 	bdx_mdio_set_speed(priv->pBdxRegs, priv->phy_ops.mdio_speed);
 
-	if (priv->phy_ops.mdio_reset(priv, 1, priv->phy_type))
+	if (priv->phy_ops.mdio_reset(priv, priv->phy_mdio_port, priv->phy_type)) {
 		return PHY_TYPE_NA;
+	}
 
 	return phy_type;
 }
@@ -2623,10 +2625,13 @@ static int bdx_tx_transmit(struct sk_buff *skb, struct net_device *ndev)
 		}
 	}
 	WARN_ON(f->wptr >= f->memsz);	/* finished with valid wptr */
+	if (pkt_len < 60) {
+		nr_frags++;
+	}
 	priv->tx_level -= txd_sizes[nr_frags].bytes;
 	WARN_ON(priv->tx_level <= 0);
 
-	/* FIXME: this triggers all the time. */
+	/* FIXED: no more triggering! -> FIXME: this triggers all the time. */
 	WARN_ON_ONCE(priv->tx_level > BDX_MAX_TX_LEVEL);
 
 #if (defined(TN40_PTP) && defined(ETHTOOL_GET_TS_INFO))
@@ -3616,6 +3621,7 @@ static void __exit bdx_remove(struct pci_dev *pdev)
 	bdx_tx_free(priv);
 	unregister_netdev(ndev);
 	free_netdev(ndev);
+	free_irq(pdev->irq, ndev);
 	pci_free_irq_vectors(pdev);
 	iounmap(nic->regs);
 	pci_release_regions(pdev);
