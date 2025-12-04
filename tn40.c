@@ -1760,7 +1760,7 @@ static struct bdx_page *bdx_rx_get_page(struct bdx_priv *priv)
 			netdev_dbg(priv->ndev,
 				   "Replacing - loops %d nFrees %d\n", nLoops,
 				   priv->rx_page_table.nFrees);
-			bdx_rx_free_bdx_page(priv, firstPage);
+			bdx_rx_free_page(priv, firstPage);
 			if (bdx_rx_alloc_page(priv, firstPage) == 0) {
 				rPage = firstPage;
 				list_del((struct list_head *)rPage);
